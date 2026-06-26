@@ -87,7 +87,7 @@ Map each finding class to its fix:
 | `secrets-outside-env` | Add `environment: <name>` to the job referencing the secrets, so branch/reviewer protection rules can gate them. Repo-level secrets still resolve; flag that protection rules must be configured in repo Settings to realize the benefit. |
 | `concurrency-limits` | Add a `concurrency:` block. PR checks: `group: <wf>-${{ github.ref }}`, `cancel-in-progress: true`. Release/deploy: key by tag/ref, `cancel-in-progress: false` (never abort mid-publish). |
 | `anonymous-definition` | Give every job a `name:`. |
-| `superfluous-actions` | Prefer a first-party tool over a third-party action when it covers the used features. E.g. replace `softprops/action-gh-release` with `gh release create "$TAG" assets/* --generate-notes --prerelease="$PRE" --latest="$LATEST"` (gh is preinstalled). Only keep the action if you need features gh lacks (draft, discussions, changelog templating, asset rename). |
+| `superfluous-actions` | Prefer a first-party tool over a third-party action when it covers the used features. E.g. replace `softprops/action-gh-release` with `gh release create "$TAG" assets/* --generate-notes --prerelease="$PRE" --latest="$LATEST"` (gh is preinstalled). **If the job has no `actions/checkout` step (e.g. a publish job that only downloads artifacts), gh has no local git repo** — set `env: { GH_REPO: ${{ github.repository }} }` so gh targets the repo via the API, and do NOT pass `--verify-tag` (it shells out to git and fails). Only keep the action if you need features gh lacks (draft, discussions, changelog templating, asset rename). |
 | `dependabot-cooldown` | See Step 6. |
 
 Notes:
@@ -187,3 +187,4 @@ Commit workflow changes under a `ci:` prefix. Each commit message should state w
 - After SHA-pinning, a major-version bump can silently change inputs — always read release notes (Step 3).
 - `secrets-outside-env` is only fully resolved when the named environment has protection rules configured in repo Settings; adding the `environment:` key alone satisfies zizmor but is cosmetic until rules exist. Say so explicitly.
 - An auditor-persona CI gate will block PRs on informational findings — only enable it once the repo is already clean at that bar.
+- zizmor and actionlint are static — they do not execute the workflow. A change that passes both can still fail at runtime (e.g. `gh release create` needing repo/git context). When you rework a release/publish workflow, watch the next real run (`gh run watch`) before considering it done.
